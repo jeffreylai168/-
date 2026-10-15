@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>事審救星</title>
+
+  <!-- === iOS / Android 主畫面全螢幕 App (無網址列) 核心設定 === -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="事審救星">
+  <meta name="theme-color" content="#0f766e">
+
+  <!-- PWA：manifest 與 PNG 圖示（iOS 主畫面不支援 SVG 圖示） -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+  <!-- === 100% 離線內建 CSS (不依賴任何外部 CDN) === -->
+  <style>
+    :root {
+      --brand: #0f766e;
+      --brand-dark: #115e59;
+      --brand-soft: #f0fdfa;
+      --accent: #b45309;
+      --accent-soft: #fffbeb;
+      --ink: #0f172a;
+      --ink-muted: #64748b;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      padding-bottom: calc(68px + var(--safe-bottom));
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    input, textarea, select, .selectable {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    /* 頂部 App 狀態列與標題列 (完美支援 iPhone 動態島/瀏海安全區) */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--brand);
+      color: white;
+      padding-top: var(--safe-top);
+      box-shadow: 0 2px 8px rgba(15, 118, 110, 0.18);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .logo-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: white;
+      color: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 17px;
+    }
+    .search-box {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      padding: 6px 12px;
+      gap: 6px;
+    }
+    .search-box:focus-within {
+      background: white;
+      color: var(--ink);
+    }
+    .search-box input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-box input::placeholder { color: rgba(255, 255, 255, 0.78); }
+    .search-box:focus-within input::placeholder { color: var(--ink-muted); }
+
+    /* 主容器 */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    /* 控制列 (科別與分類切換) */
+    .control-bar {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .pill-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+    .pill-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 13px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .pill-btn.active {
+      background: var(--brand);
+      color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    /* 瀑布流卡片佈局 */
+    .board-grid {
+      column-count: 1;
+      column-gap: 14px;
+    }
+    @media (min-width: 700px) { .board-grid { column-count: 2; } }
+    @media (min-width: 1060px) { .board-grid { column-count: 3; } }
+
+    .group-card {
+      break-inside: avoid;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    .group-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--brand);
+      margin: 0;
+    }
+    .group-count {
+      font-size: 11px;
+      background: #f1f5f9;
+      color: var(--ink-muted);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .drug-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .drug-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: white;
+      font-size: 13px;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.12s;
+      text-align: left;
+    }
+    .drug-chip:hover, .drug-chip:active {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+    }
+    .drug-chip.fav {
+      border-color: #fbbf24;
+      background: #fffbeb;
+    }
+    .chip-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      color: var(--ink-muted);
+    }
+    .chip-code.has-rule {
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    /* 底部原生感 App Tab Bar */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--line);
+      padding-bottom: var(--safe-bottom);
+      display: flex;
+      justify-content: space-around;
+      height: calc(58px + var(--safe-bottom));
+    }
+    .nav-item {
+      flex: 1;
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: var(--ink-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+    }
+    .nav-item.active { color: var(--brand); }
+    .nav-badge {
+      position: absolute;
+      top: 4px;
+      margin-left: 22px;
+      background: #f59e0b;
+      color: white;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+
+    /* 彈出視窗 Modal (支援手機底部滑出感) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    @media (min-width: 768px) {
+      .modal-backdrop { align-items: center; padding: 16px; }
+    }
+    .modal-sheet {
+      background: white;
+      width: 100%;
+      max-width: 920px;
+      max-height: 92vh;
+      border-radius: 20px 20px 0 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.2);
+      padding-bottom: var(--safe-bottom);
+    }
+    @media (min-width: 768px) {
+      .modal-sheet { border-radius: 18px; max-height: 88vh; padding-bottom: 0; }
+    }
+    .modal-header {
+      padding: 14px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 820px) {
+      .modal-body { grid-template-columns: 7fr 5fr; }
+    }
+    .rule-box {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      max-height: 46vh;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      font-size: 13.5px;
+      color: #1e293b;
+    }
+    .calc-box {
+      background: var(--brand-soft);
+      border: 1.5px solid rgba(15, 118, 110, 0.28);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      margin-bottom: 3px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: white;
+      font-size: 13px;
+      outline: none;
+    }
+    .field-input:focus { border-color: var(--brand); }
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .btn-primary:active { background: var(--brand-dark); }
+    .btn-outline {
+      background: white;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    mark {
+      background: #fef08a;
+      color: #854d0e;
+      padding: 0 2px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .hidden { display: none !important; }
+
+    /* 條文來源標籤 */
+    .src-tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+    .modal-body > * { min-width: 0; }
+    .src-builtin { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .src-import { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .src-none { background: #f1f5f9; color: #475569; border: 1px solid var(--line); }
+
+    /* 安裝 / 更新 / 離線 提示列 */
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(80px + var(--safe-bottom)); z-index: 60;
+      background: #0f172a; color: white; border-radius: 12px;
+      padding: 10px 14px; font-size: 13px; display: flex; gap: 10px; align-items: center;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.25); max-width: calc(100vw - 32px);
+    }
+    .toast button { background: #14b8a6; color: #042f2e; border: none; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
+    .offline-pill { font-size: 11px; background: rgba(255,255,255,0.18); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+    .rev-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .rev-table th, .rev-table td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+    .rev-table th { background: var(--brand-soft); color: var(--brand); }
+    .modal-sheet { overscroll-behavior: contain; }
+  </style>
+</head>
+<body>
+
+  <!-- 頂部 App Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="app-logo" onclick="switchTab('board')">
+        <div class="logo-badge">事</div>
+        <span>事審救星</span>
+      </div>
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="globalSearch" type="text" placeholder="搜尋藥名、條文號或內文關鍵字..." oninput="handleSearch(this.value)">
+        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;" aria-label="清除搜尋">✕</button>
+      </div>
+      <span id="offlinePill" class="offline-pill hidden">離線中</span>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="container">
+
+    <!-- 分頁 1：藥物看板 -->
+    <div id="view-board">
+      <div class="control-bar">
+        <div class="pill-group">
+          <button onclick="setSpecialty('rheum')" id="spec-rheum" class="pill-btn active">風濕免疫</button>
+          <button onclick="setSpecialty('heme')" id="spec-heme" class="pill-btn">血液科</button>
+          <button onclick="setSpecialty('onco')" id="spec-onco" class="pill-btn">腫瘤科</button>
+          <button onclick="setSpecialty('all')" id="spec-all" class="pill-btn">全部</button>
+        </div>
+        <div class="pill-group">
+          <button onclick="setGroupBy('disease')" id="group-disease" class="pill-btn active">依疾病</button>
+          <button onclick="setGroupBy('mechanism')" id="group-mechanism" class="pill-btn">依機轉</button>
+        </div>
+      </div>
+
+      <div id="searchStatus" class="hidden" style="background:var(--brand-soft);border:1px solid rgba(15,118,110,0.3);color:var(--brand);padding:9px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <span id="searchStatusText"></span>
+        <button onclick="clearSearch()" style="background:none;border:none;color:var(--brand);text-decoration:underline;font-weight:700;cursor:pointer;">清除</button>
+      </div>
+
+      <div id="boardContainer" class="board-grid"></div>
+    </div>
+
+    <!-- 分頁 2：我的常用藥 -->
+    <div id="view-favorites" class="hidden">
+      <div class="group-card">
+        <h2 style="font-size:16px;margin:0 0 6px 0;color:var(--brand);">⭐ 我的收藏常用藥</h2>
+        <p style="font-size:12.5px;color:var(--ink-muted);margin:0 0 14px 0;">點選任何藥物右上角的星號即可收藏於此，離線秒開即查。</p>
+        <div id="favoritesContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;"></div>
+      </div>
+    </div>
+
+    <!-- 分頁 3：離線資料庫管理 & 安裝教學 -->
+    <div id="view-database" class="hidden">
+      <div class="group-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <h2 style="font-size:16px;margin:0;color:var(--brand);">📦 離線條文資料庫管理 (IndexedDB)</h2>
+          <span id="dbCountBadge" style="font-size:12px;background:var(--brand-soft);color:var(--brand);padding:4px 10px;border-radius:999px;font-weight:700;">檢查中...</span>
+        </div>
+        <p style="font-size:13px;color:var(--ink-muted);line-height:1.5;margin:8px 0 12px 0;">
+          App 已內建健保署「藥品給付規定」<b>全文（1150922 版）</b>：通則、第1–15節條文 630 條、附表 86 份，安裝後即可離線查詢；看板以外的條文用上方搜尋找（如「9.69」、「附表十四」、「ustekinumab」）。<b>健保署改版時，在此貼上新版全文，匯入內容會優先於內建</b>。
+        </p>
+
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:12.5px;color:#92400e;margin-bottom:12px;line-height:1.6;">
+          <b>💡 如何匯入健保條文？</b><br>
+          1. 到健保署「最新版藥品給付規定內容（分章節）」下載該節的 Word 或 PDF 檔並打開。<br>
+          2. 按 <b>Ctrl + A（全選）</b> ➔ <b>Ctrl + C（複製）</b>。<br>
+          3. 直接貼到下方文字框，按下「<b>解析並永久存入離線資料庫</b>」即可！
+        </div>
+
+        <textarea id="rawImportTextarea" rows="6" class="field-input" placeholder="請在此貼上從 Word 複製的健保給付規定全文..." style="font-size:12px;margin-bottom:10px;"></textarea>
+
+        <div id="importMsg" class="hidden" style="padding:10px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:10px;"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <button onclick="resetOfflineDB()" class="btn-outline" style="color:#dc2626;border-color:#fecaca;">清除匯入資料</button>
+          <button onclick="importTextToIndexedDB()" class="btn-primary">💾 解析並永久存入離線資料庫</button>
+        </div>
+      </div>
+
+      <div class="group-card" style="margin-bottom:14px;">
+        <h2 style="font-size:16px;margin:0 0 8px 0;color:var(--brand);">📱 安裝成 App</h2>
+        <div id="installStatus" style="font-size:13px;color:var(--ink-muted);margin-bottom:8px;"></div>
+        <button id="installBtn" onclick="promptInstall()" class="btn-primary hidden" style="margin-bottom:10px;">⬇️ 安裝到主畫面</button>
+        <div style="font-size:13px;line-height:1.65;color:var(--ink);">
+          <ul style="margin:0;padding-left:18px;">
+            <li><b>iPhone / iPad：</b>用 <b>Safari</b> 開啟本網址 ➔ 點下方「<b>分享</b>」 ➔「<b>加入主畫面</b>」。</li>
+            <li><b>Android：</b>用 Chrome 開啟，點上方「安裝到主畫面」按鈕；若沒出現，點右上「⋮」➔「<b>安裝應用程式</b>」。</li>
+            <li><b>電腦（Chrome / Edge）：</b>網址列右側的「安裝」圖示。</li>
+          </ul>
+          <p style="margin:8px 0 0 0;color:var(--ink-muted);font-size:12px;">第一次開啟後，App 本體會存在裝置上，之後沒有網路也能開啟。</p>
+        </div>
+      </div>
+
+      <div class="group-card">
+        <h2 style="font-size:15px;margin:0 0 8px 0;color:var(--brand);">附錄：版本與修訂紀錄</h2>
+        <p style="font-size:12px;color:var(--ink-muted);margin:0 0 8px 0;">App 版本 <b id="appVersionLabel">2.1.0</b>。內建條文來源：健保署「最新版藥品給付規定內容（分章節）」。本 App 為查詢輔助，送審請以健保署最新公告為準。</p>
+        <table class="rev-table">
+          <thead><tr><th style="width:62px;">版本</th><th style="width:92px;">日期</th><th>內容</th></tr></thead>
+          <tbody>
+            <tr><td>1.0</td><td>—</td><td>初版單一 HTML；內建 7 條為摘要改寫。</td></tr>
+            <tr><td>2.1.0</td><td>2026-10-16</td><td>內建條文擴充為健保署給付規定全文（1150922 版）：通則、630 條條文、86 份附表（附表僅文字），經程式驗證串接後與原文逐字相同；看板外條文可由全文搜尋開啟；條文來源標籤依節別顯示。</td></tr>
+            <tr><td>2.0.0</td><td>2026-10-16</td><td>7 條內建條文改為健保署原文（第8節 115.9.22、第10節 115.07.23）並標示版本；改為可安裝 PWA（manifest、Service Worker 離線快取、PNG 圖示）；返回鍵／手勢可關閉條文視窗；匯入解析器收緊；儲存與剪貼簿錯誤處理；10.7.3 預設療程文字更正為「停藥後 6 個月」。</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 底部導覽列 Tab Bar -->
+  <nav class="bottom-nav">
+    <button onclick="switchTab('board')" id="nav-board" class="nav-item active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      <span>藥物看板</span>
+    </button>
+    <button onclick="switchTab('favorites')" id="nav-favorites" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>我的常用藥</span>
+      <span id="favCountBadge" class="nav-badge">0</span>
+    </button>
+    <button onclick="switchTab('database')" id="nav-database" class="nav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+      <span>離線條文庫</span>
+    </button>
+  </nav>
+
+  <!-- 藥品條文與事審產生器 Modal -->
+  <div id="drugModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span id="modalCode" style="background:var(--brand);color:white;font-family:monospace;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:5px;"></span>
+            <span id="modalMechanism" style="background:#e2e8f0;color:#334155;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:5px;"></span>
+          </div>
+          <h3 id="modalTitle" style="margin:6px 0 0 0;font-size:17px;font-weight:800;"></h3>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button id="modalFavBtn" onclick="toggleFavoriteFromModal()" class="btn-outline" style="padding:6px 10px;font-size:15px;white-space:nowrap;" title="加入常用藥">☆</button>
+          <button onclick="closeModal()" class="btn-outline" style="padding:6px 10px;font-size:15px;" aria-label="關閉">✕</button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- 左側：離線條文內容 -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+              <strong style="font-size:13.5px;color:var(--brand);">📄 健保給付規定條文</strong>
+              <span id="modalSource" class="src-tag src-none"></span>
+            </div>
+            <input id="modalTextSearch" type="text" class="field-input" placeholder="在條文內搜尋高亮..." oninput="renderModalRuleText()" style="width:155px;padding:4px 8px;font-size:12px;">
+          </div>
+          <div id="modalRuleContent" class="rule-box selectable"></div>
+        </div>
+
+        <!-- 右側：事審申請書文字自動產生器 -->
+        <div class="calc-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:13.5px;color:var(--brand);">🧮 事審申請書文字產生器</strong>
+            <span style="font-size:11px;color:var(--ink-muted);">離線自動組字</span>
+          </div>
+
+          <div class="form-grid">
+            <div>
+              <label class="field-label">申請類別</label>
+              <select id="calcType" onchange="updateDraftText()" class="field-input">
+                <option value="初次申請">初次申請</option>
+                <option value="續用申請">續用申請</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">目標適應症</label>
+              <select id="calcIndication" onchange="updateDraftText()" class="field-input"></select>
+            </div>
+            <div>
+              <label class="field-label">病患體重 (kg)</label>
+              <input id="calcWeight" type="number" value="60" oninput="updateDraftText()" class="field-input">
+            </div>
+            <div>
+              <label class="field-label">申請療程</label>
+              <input id="calcDuration" type="text" value="24週 (6個月)" oninput="updateDraftText()" class="field-input">
+            </div>
+          </div>
+
+          <div>
+            <label class="field-label">給藥頻率與單次劑量</label>
+            <input id="calcRegimen" type="text" oninput="updateDraftText()" class="field-input">
+          </div>
+
+          <div class="form-grid">
+            <div>
+              <label class="field-label">申請總量 (支/顆)</label>
+              <input id="calcTotalQty" type="text" placeholder="如：共 12 支" oninput="updateDraftText()" class="field-input">
+            </div>
+            <div>
+              <label class="field-label">活動度指標 (DAS28/BASDAI等)</label>
+              <input id="calcNote" type="text" placeholder="如：DAS28 5.6" oninput="updateDraftText()" class="field-input">
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span class="field-label" style="margin:0;">生成結果：</span>
+              <button onclick="copyDraftText()" id="copyBtn" class="btn-primary" style="padding:4px 10px;font-size:12px;">複製文字</button>
+            </div>
+            <textarea id="calcOutput" rows="4" class="field-input selectable" style="font-family:monospace;font-size:12px;line-height:1.45;"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"><span id="toastText"></span><button id="toastBtn" class="hidden"></button></div>
+
+  <script src="rules-builtin.js"></script>
+  <script>
+    // === 1. 內建條文：見 rules-builtin.js（健保署原文） ===
+    const APP_VERSION = '2.1.0';
+
+    // 安全的 localStorage（私密模式 / 停用儲存時不讓整頁出錯）
+    const store = {
+      get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+    };
+    function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    // === 2. 完整藥物索引資料庫 ===
+    const DB = {
+      rheum: {
+        diseaseOrder: ["類風濕性關節炎（RA）","幼年型關節炎（JIA）","僵直性脊椎炎（AS）","乾癬性關節炎（周邊型）","乾癬性脊椎病變（軸向型 PsA）","乾癬 / 掌蹠膿皰症","全身性紅斑性狼瘡（SLE）/ 狼瘡腎炎","血管炎 / 自體發炎疾病","克隆氏症（消化科處方）","潰瘍性結腸炎（消化科處方）","異位性皮膚炎 / 皮膚","痛風","骨質疏鬆","B 型肝炎（預防／治療）"],
+        mechanismOrder: ["TNF-α 抑制劑","IL-6 抑制劑","IL-17 抑制劑","IL-12/23 / IL-23 抑制劑","JAK 抑制劑","T 細胞共刺激調節（CTLA-4-Ig）","Anti-CD20","BLyS / 第一型干擾素受體","IL-5 抑制劑","傳統 DMARD / 免疫抑制劑","降尿酸藥","骨質疏鬆治療","抗病毒藥（B 肝）"],
+        items: [
+          {id:"8.2.4.2",label:"Etanercept（Enbrel）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"每週皮下注射 50mg (1支)"},
+          {id:"8.2.4.2",label:"Adalimumab（Humira）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"每 2 週皮下注射 40mg (1支)"},
+          {id:"8.2.4.2",label:"Golimumab（Simponi）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"每月皮下注射 50mg (1支)"},
+          {id:"8.2.4.2",label:"Certolizumab（Cimzia）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"第0,2,4週各400mg，之後每2週200mg"},
+          {id:"8.2.4.2",label:"Infliximab（Remicade/Remsima）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"第0,2,6週 IV 3mg/kg，之後每8週1次或每2週SC 120mg"},
+          {id:"8.2.4.2",label:"Tocilizumab（Actemra）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"IL-6 抑制劑",defaultRegimen:"SC 162mg 每週或每2週1支；或 IV 4-8mg/kg 每4週1次"},
+          {id:"8.2.4.2",label:"Abatacept（Orencia）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"T 細胞共刺激調節（CTLA-4-Ig）",defaultRegimen:"每週皮下注射 125mg (1支)"},
+          {id:"8.2.4.2",label:"Tofacitinib（Xeljanz）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"JAK 抑制劑",defaultRegimen:"每日口服 5mg BID 或 11mg XR QD"},
+          {id:"8.2.4.2",label:"Baricitinib（Olumiant）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"JAK 抑制劑",defaultRegimen:"每日口服 4mg QD"},
+          {id:"8.2.4.2",label:"Upadacitinib（Rinvoq）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"JAK 抑制劑",defaultRegimen:"每日口服 15mg QD"},
+          {id:"8.2.4.2",label:"Filgotinib（Jyseleca）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"JAK 抑制劑",defaultRegimen:"每日口服 200mg QD"},
+          {id:"8.2.4.2",label:"Peficitinib（Smyraf）",title:"8.2.4.2. 成人類風濕性關節炎治療部分",diseases:["類風濕性關節炎（RA）"],mechanism:"JAK 抑制劑",defaultRegimen:"每日口服 150mg QD"},
+          {id:"8.2.7",label:"Rituximab（Mabthera）",title:"8.2.7. 類風濕性關節炎及天疱瘡成人治療",diseases:["類風濕性關節炎（RA）","異位性皮膚炎 / 皮膚"],mechanism:"Anti-CD20",defaultRegimen:"第1天與第15天各 IV 1000mg，共2次"},
+          {id:"8.2.4.1",label:"JIA 兒童生物製劑（Enbrel/Humira/Actemra/Xeljanz/Cosentyx）",title:"8.2.4.1. 幼年型慢性關節炎兒童治療部分",diseases:["幼年型關節炎（JIA）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"依兒童體重與仿單規範給藥"},
+          {id:"8.2.4.3",label:"Adalimumab / Etanercept / Golimumab / Certolizumab (AS)",title:"8.2.4.3. 僵直性脊椎炎治療部分 (TNF-α)",diseases:["僵直性脊椎炎（AS）"],mechanism:"TNF-α 抑制劑",defaultRegimen:"依各 TNF-α 抑制劑標準頻率皮下注射"},
+          {id:"8.2.4.3",label:"Secukinumab（Cosentyx）",title:"8.2.4.3. 僵直性脊椎炎治療部分",diseases:["僵直性脊椎炎（AS）"],mechanism:"IL-17 抑制劑",defaultRegimen:"第0,1,2,3,4週各150mg，之後每4週150mg"},
+          {id:"8.2.4.3",label:"Ixekizumab（Taltz）",title:"8.2.4.3. 僵直性脊椎炎治療部分",diseases:["僵直性脊椎炎（AS）"],mechanism:"IL-17 抑制劑",defaultRegimen:"每 4 週皮下注射 80mg (1支)"},
+          {id:"8.2.4.3",label:"Bimekizumab（Bimzelx）",title:"8.2.4.3. 僵直性脊椎炎治療部分 (115/5/1)",diseases:["僵直性脊椎炎（AS）"],mechanism:"IL-17 抑制劑",defaultRegimen:"每 4 週皮下注射 160mg (1支)"},
+          {id:"8.2.4.3",label:"Upadacitinib（Rinvoq）/ Tofacitinib（Xeljanz）(AS)",title:"8.2.4.3. 僵直性脊椎炎治療部分 (JAKi)",diseases:["僵直性脊椎炎（AS）"],mechanism:"JAK 抑制劑",defaultRegimen:"Rinvoq 15mg QD 或 Xeljanz 5mg BID"},
+          {id:"8.2.4.4",label:"周邊型 PsA（TNF-α / IL-17 / IL-23 / JAKi）",title:"8.2.4.4. 活動性乾癬性周邊關節炎治療部分",diseases:["乾癬性關節炎（周邊型）"],mechanism:"IL-17 抑制劑",defaultRegimen:"依所選生物製劑或 JAKi 標準療程給藥"},
+          {id:"8.2.4.4",label:"Guselkumab（Tremfya）/ Risankizumab（Skyrizi）",title:"8.2.4.4. 乾癬性周邊關節炎 (IL-23 抑制劑)",diseases:["乾癬性關節炎（周邊型）"],mechanism:"IL-12/23 / IL-23 抑制劑",defaultRegimen:"Tremfya 第0,4週及之後每8週100mg / Skyrizi 第0,4週及之後每12週150mg"},
+          {id:"8.2.4.5",label:"軸向型 PsA（乾癬性脊椎病變）",title:"8.2.4.5. 乾癬性脊椎病變治療部分",diseases:["乾癬性脊椎病變（軸向型 PsA）"],mechanism:"IL-17 抑制劑",defaultRegimen:"依條文 8.2.4.5 標準劑量給藥"},
+          {id:"8.2.4.6.1",label:"乾癬生物製劑（8.2.4.6.1）",title:"8.2.4.6.1. 乾癬治療部分",diseases:["乾癬 / 掌蹠膿皰症"],mechanism:"IL-12/23 / IL-23 抑制劑",defaultRegimen:"依乾癬條文規範給藥"},
+          {id:"8.2.13",label:"Belimumab（Benlysta）",title:"8.2.13. 全身性紅斑性狼瘡 (SLE) 及狼瘡腎炎 (LN)",diseases:["全身性紅斑性狼瘡（SLE）/ 狼瘡腎炎"],mechanism:"BLyS / 第一型干擾素受體",defaultRegimen:"每週 SC 200mg 或每 4 週 IV 10mg/kg"},
+          {id:"8.2.18",label:"Anifrolumab（Saphnelo）",title:"8.2.18. 全身性紅斑性狼瘡 (SLE)",diseases:["全身性紅斑性狼瘡（SLE）/ 狼瘡腎炎"],mechanism:"BLyS / 第一型干擾素受體",defaultRegimen:"每 4 週靜脈輸注 300mg (1支)"},
+          {id:"8.2.17",label:"Mepolizumab（Nucala）/ Benralizumab（Fasenra）",title:"8.2.17. 嗜伊紅性肉芽腫併多發性血管炎 (EGPA)",diseases:["血管炎 / 自體發炎疾病"],mechanism:"IL-5 抑制劑",defaultRegimen:"Nucala 300mg Q4W 或 Fasenra 30mg Q4W"},
+          {id:"8.2.4.7.1",label:"克隆氏症成人生物製劑（8.2.4.7.1）",title:"8.2.4.7.1. 克隆氏症成人治療部分",diseases:["克隆氏症（消化科處方）"],mechanism:"TNF-α 抑制劑"},
+          {id:"8.2.4.9.1",label:"潰瘍性結腸炎成人生物製劑（8.2.4.9.1）",title:"8.2.4.9.1. 潰瘍性結腸炎成人治療部分",diseases:["潰瘍性結腸炎（消化科處方）"],mechanism:"TNF-α 抑制劑"},
+          {id:"13.17.1",label:"異位性皮膚炎（Dupixent / Rinvoq / Cibinqo / Ebglyss）",title:"13.17.1. 12歲以上異位性皮膚炎治療部分",diseases:["異位性皮膚炎 / 皮膚"],mechanism:"JAK 抑制劑"},
+          {id:"8.2.5",label:"Leflunomide（Arava）",title:"8.2.5. Leflunomide 給付規定",diseases:["類風濕性關節炎（RA）","乾癬性關節炎（周邊型）"],mechanism:"傳統 DMARD / 免疫抑制劑",defaultRegimen:"每日口服 20mg QD"},
+          {id:"2.11.1",label:"Febuxostat（Feburic）",title:"2.11.1. 降尿酸藥物給付規定",diseases:["痛風"],mechanism:"降尿酸藥"},
+          {id:"5.6.1",label:"抗骨質再吸收劑（Prolia / Aclasta / Fosamax）",title:"5.6.1. 抗骨質再吸收劑",diseases:["骨質疏鬆"],mechanism:"骨質疏鬆治療",defaultRegimen:"Prolia 60mg 每6個月SC 1支"},
+          {id:"5.6.3",label:"Romosozumab（Evenity）",title:"5.6.3. Romosozumab 骨質疏鬆治療",diseases:["骨質疏鬆"],mechanism:"骨質疏鬆治療",defaultRegimen:"每月皮下注射 210mg (2支)，共12個月"},
+          {id:"10.7.3",label:"B 肝抗病毒藥（Entecavir / TDF / TAF）",title:"10.7.3. B型肝炎治療與生物製劑/化療預防投藥",diseases:["B 型肝炎（預防／治療）"],mechanism:"抗病毒藥（B 肝）",defaultRegimen:"每日口服 1 顆，自免疫抑制劑治療前 1 週起至停藥後 6 個月"}
+        ]
+      },
+      heme: {
+        diseaseOrder: ["DLBCL / LBCL","FL","CLL / SLL","MM","AML","ALL","CML","MDS","MPN","ITP / AA","PNH","血栓 / 抗凝"],
+        mechanismOrder: ["Anti-CD20","ADC / 雙特異性抗體","CAR-T","BTK / BCL-2 抑制劑","ABL1 / FLT3 / JAK 抑制劑","MM 標靶與免疫調節","補體抑制劑 / TPO-RA","抗凝血劑"],
+        items: [
+          {id:"9.20",label:"Rituximab（Mabthera）",title:"9.20. 抗癌瘤部分給付規定",diseases:["DLBCL / LBCL","FL","CLL / SLL"],mechanism:"Anti-CD20"},
+          {id:"9.105",label:"Polatuzumab vedotin（Polivy）",title:"9.105. DLBCL 治療",diseases:["DLBCL / LBCL"],mechanism:"ADC / 雙特異性抗體"},
+          {id:"9.120",label:"Glofitamab（Columvi）",title:"9.120. 雙特異性抗體 DLBCL",diseases:["DLBCL / LBCL"],mechanism:"ADC / 雙特異性抗體"},
+          {id:"9.121",label:"Epcoritamab（Epkinly）",title:"9.121. 雙特異性抗體 DLBCL",diseases:["DLBCL / LBCL","FL"],mechanism:"ADC / 雙特異性抗體"},
+          {id:"9.103",label:"Tisagenlecleucel（Kymriah）",title:"9.103. CAR-T 細胞治療",diseases:["DLBCL / LBCL","ALL"],mechanism:"CAR-T"},
+          {id:"9.140",label:"Axicabtagene ciloleucel（Yescarta）",title:"9.140. CAR-T 細胞治療 (115/10/1)",diseases:["DLBCL / LBCL"],mechanism:"CAR-T"},
+          {id:"9.61",label:"Ibrutinib（Imbruvica）",title:"9.61. BTK 抑制劑",diseases:["CLL / SLL"],mechanism:"BTK / BCL-2 抑制劑"},
+          {id:"9.100",label:"Acalabrutinib（Calquence）",title:"9.100. BTK 抑制劑",diseases:["CLL / SLL"],mechanism:"BTK / BCL-2 抑制劑"},
+          {id:"9.104",label:"Zanubrutinib（Brukinsa）",title:"9.104. BTK 抑制劑",diseases:["CLL / SLL","FL"],mechanism:"BTK / BCL-2 抑制劑"},
+          {id:"9.71",label:"Venetoclax（Venclexta）",title:"9.71. BCL-2 抑制劑",diseases:["CLL / SLL","AML"],mechanism:"BTK / BCL-2 抑制劑"},
+          {id:"9.28",label:"Bortezomib（Velcade）",title:"9.28. 多發性骨髓瘤",diseases:["MM"],mechanism:"MM 標靶與免疫調節"},
+          {id:"9.43",label:"Lenalidomide（Revlimid）",title:"9.43. 多發性骨髓瘤 / 淋巴瘤",diseases:["MM","DLBCL / LBCL","FL"],mechanism:"MM 標靶與免疫調節"},
+          {id:"9.78",label:"Daratumumab（Darzalex）",title:"9.78. Anti-CD38 多發性骨髓瘤",diseases:["MM"],mechanism:"MM 標靶與免疫調節"},
+          {id:"9.55",label:"Ruxolitinib（Jakavi）",title:"9.55. MPN 與 GVHD 治療",diseases:["MPN"],mechanism:"ABL1 / FLT3 / JAK 抑制劑"},
+          {id:"4.3.2.1",label:"Eltrombopag（Revolade）",title:"4.3.2.1. ITP 與再生不良性貧血",diseases:["ITP / AA"],mechanism:"補體抑制劑 / TPO-RA"},
+          {id:"8.2.10",label:"Eculizumab / Ravulizumab / Crovalimab",title:"8.2.10. PNH 與 aHUS 一線補體抑制劑",diseases:["PNH"],mechanism:"補體抑制劑 / TPO-RA"},
+          {id:"8.2.19",label:"Danicopan / Iptacopan / Pegcetacoplan",title:"8.2.19. PNH 二線補體抑制劑 (115/10/1)",diseases:["PNH"],mechanism:"補體抑制劑 / TPO-RA"},
+          {id:"2.1.4.2",label:"Rivaroxaban（Xarelto）",title:"2.1.4.2. Rivaroxaban 抗凝血給付規定 (115/10/1)",diseases:["血栓 / 抗凝"],mechanism:"抗凝血劑"}
+        ]
+      },
+      onco: {
+        diseaseOrder: ["乳癌","肺癌","胃腸肝膽癌","婦癌 / 攝護腺癌"],
+        mechanismOrder: ["免疫檢查點抑制劑","標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"],
+        items: [
+          {id:"9.69",label:"免疫檢查點抑制劑（Pembrolizumab / Nivolumab / Atezolizumab 等）",title:"9.69. 免疫檢查點抑制劑統合條文 (115/10/1)",diseases:["肺癌","乳癌","胃腸肝膽癌"],mechanism:"免疫檢查點抑制劑"},
+          {id:"9.80",label:"Osimertinib（Tagrisso）",title:"9.80. EGFR 標靶肺癌治療",diseases:["肺癌"],mechanism:"標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"},
+          {id:"9.18",label:"Trastuzumab（Herceptin）",title:"9.18. HER2 乳癌與胃癌",diseases:["乳癌","胃腸肝膽癌"],mechanism:"標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"},
+          {id:"9.115",label:"Trastuzumab deruxtecan（Enhertu）",title:"9.115. T-DXd 乳癌治療",diseases:["乳癌"],mechanism:"標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"},
+          {id:"9.72",label:"CDK4/6 抑制劑（Ribociclib / Palbociclib）",title:"9.72. 乳癌 CDK4/6 抑制劑",diseases:["乳癌"],mechanism:"標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"},
+          {id:"9.85",label:"PARP 抑制劑（Olaparib / Niraparib / Talazoparib）",title:"9.85. PARP 抑制劑",diseases:["乳癌","婦癌 / 攝護腺癌"],mechanism:"標靶治療 (EGFR/ALK/HER2/CDK4/6/PARP)"}
+        ]
+      }
+    };
+
+    // === 3. IndexedDB 離線資料庫引擎 (容量無上限，永久保存整份條文) ===
+    const IDB_NAME = 'NHI_Offline_App_DB';
+    const IDB_STORE = 'rules_store';
+    let offlineRulesCache = {}; // 記憶體快取
+
+    function openIDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadRulesFromIndexedDB() {
+      try {
+        const db = await openIDB();
+        return new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readonly');
+          const store = tx.objectStore(IDB_STORE);
+          const req = store.get('all_rules_map');
+          req.onsuccess = () => {
+            offlineRulesCache = req.result || {};
+            allRulesCache = null;
+            updateDbBadgeUI();
+            resolve(offlineRulesCache);
+          };
+          req.onerror = () => resolve({});
+        });
+      } catch (e) {
+        return {};
+      }
+    }
+
+    async function saveRulesToIndexedDB(mapObj) {
+      const db = await openIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        const store = tx.objectStore(IDB_STORE);
+        store.put(mapObj, 'all_rules_map');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function updateDbBadgeUI() {
+      const count = Object.keys(offlineRulesCache).length;
+      const el = document.getElementById('dbCountBadge');
+      if (count > 0) {
+        el.textContent = `✅ 已匯入 ${count} 條（優先於內建全文）`;
+      } else {
+        el.textContent = `內建健保署全文 ${Object.keys(BUILTIN_RULES).length} 則（${BUILTIN_SOURCE.label}）`;
+      }
+    }
+
+    // 回傳 { text, source: 'import'|'builtin', code } 或 null；匯入內容優先
+    function getRule(id) {
+      const parts = id.split('.');
+      while (parts.length >= 1) {
+        const p = parts.join('.');
+        if (offlineRulesCache[p]) return { text: offlineRulesCache[p], source: 'import', code: p };
+        if (BUILTIN_RULES[p]) return { text: BUILTIN_RULES[p], source: 'builtin', code: p };
+        if (parts.length <= 2) break;   // 不往上退到「8.2」這種大類
+        parts.pop();
+      }
+      return null;
+    }
+    function getRuleText(id) { const r = getRule(id); return r ? r.text : null; }
+    function sectionLabel(code) {
+      if (code === '通則') return '藥品給付規定通則';
+      if (code.startsWith('附表')) return '附表';
+      return (BUILTIN_SOURCE.sections[code.split('.')[0]] || '');
+    }
+
+    // 全文搜尋用：合併內建與匯入（匯入優先），並快取小寫文字
+    let allRulesCache = null;
+    function allRules() {
+      if (allRulesCache) return allRulesCache;
+      const merged = { ...BUILTIN_RULES, ...offlineRulesCache };
+      allRulesCache = Object.keys(merged).map(code => ({ code, text: merged[code], lower: merged[code].toLowerCase() }));
+      return allRulesCache;
+    }
+    function ruleAsItem(code, text) {
+      const first = text.split('\n')[0].replace(/^\s*[\d.]+\s*\.?\s*/, '').trim();
+      const label = first.length > 32 ? first.slice(0, 32) + '…' : (first || code);
+      return { id: code, label, title: text.split('\n')[0], diseases: ['條文全文'], mechanism: sectionLabel(code) || '條文', defaultRegimen: '' };
+    }
+
+    async function importTextToIndexedDB() {
+      const raw = document.getElementById('rawImportTextarea').value;
+      if (!raw || !raw.trim()) {
+        const msgEl0 = document.getElementById('importMsg');
+        msgEl0.classList.remove('hidden');
+        msgEl0.style.background = '#fffbeb'; msgEl0.style.color = '#92400e';
+        msgEl0.textContent = '請先在文字框貼上健保條文內容。';
+        return;
+      }
+      const lines = raw.replace(/\r\n/g, '\n').split('\n');
+      const parsed = {};
+      let curCode = null;
+      let buf = [];
+      // 條文標題：行首 x.y[.z…] 後接「.」或空白，再接文字（非數字、非單位、非「之」）
+      // 也接受「8.2.16.」單獨一行（Word 轉出時標題與藥名常被拆成兩行）
+      const codeRe = /^\s*((?:\d{1,2}\.)+\d{1,3})\s*(?:\.\s*$|(?:\.|\s)\s*(\S.*)$)/;
+      const badNext = /^(之|至|~|-|mg|mcg|gm|g\b|g\/|kg|ml|IU|U\b|mmol|μ|%|倍|週|個|分|天|年|kpa|cm)/i;
+      const pageHeader = /^第\s*\d+\s*節\s*-\s*\d+$/;   // PDF 頁首，如「第8節-11」
+      const cmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number);
+        for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? -1) - (y[i] ?? -1); if (d) return d; } return 0; };
+
+      for (let rLine of lines) {
+        const line = rLine.trim();
+        if (!line || pageHeader.test(line)) continue;
+        const m = line.match(codeRe);
+        if (m) {
+          const code = m[1];
+          const segs = code.split('.');
+          const top = parseInt(segs[0], 10);
+          const zeroTail = segs[segs.length - 1] === '0';   // 如「3.0 gm/dL」不是條文
+          const plausible = top >= 1 && top <= 15 && !zeroTail && !badNext.test(m[2] || '') &&
+                            (segs.length >= 3 || !m[2] || /^[A-Za-z\u4e00-\u9fff（(]/.test(m[2])) &&
+                            (!curCode || cmp(code, curCode) > 0 || code.split('.')[0] !== curCode.split('.')[0]);
+          if (plausible) {
+            if (curCode && buf.length) {
+              parsed[curCode] = (parsed[curCode] ? parsed[curCode] + '\n\n' : '') + buf.join('\n');
+            }
+            curCode = code;
+            buf = [line];
+            continue;
+          }
+        }
+        if (curCode) buf.push(line);
+      }
+      if (curCode && buf.length) {
+        parsed[curCode] = (parsed[curCode] ? parsed[curCode] + '\n\n' : '') + buf.join('\n');
+      }
+
+      const count = Object.keys(parsed).length;
+      const msgEl = document.getElementById('importMsg');
+      msgEl.classList.remove('hidden');
+
+      if (count === 0) {
+        msgEl.style.background = '#fef2f2';
+        msgEl.style.color = '#991b1b';
+        msgEl.textContent = '⚠️ 未偵測到條文編號（如 8.2.4.2.），請確認貼上的文字包含條文編號。';
+        return;
+      }
+
+      offlineRulesCache = { ...offlineRulesCache, ...parsed };
+      allRulesCache = null;
+      try {
+        await saveRulesToIndexedDB(offlineRulesCache);
+      } catch (e) {
+        msgEl.style.background = '#fef2f2';
+        msgEl.style.color = '#991b1b';
+        msgEl.textContent = '⚠️ 無法寫入本機資料庫（可能為私密瀏覽模式或儲存空間已滿），本次匯入只在關閉前有效。';
+        renderBoard();
+        return;
+      }
+      updateDbBadgeUI();
+      renderBoard();
+
+      msgEl.style.background = '#ecfdf5';
+      msgEl.style.color = '#065f46';
+      const codes = Object.keys(parsed);
+      msgEl.textContent = `🎉 已解析並存入 ${count} 條：${codes.slice(0, 12).join('、')}${count > 12 ? ' …' : ''}。請抽查一兩條內容是否完整。`;
+      document.getElementById('rawImportTextarea').value = '';
+    }
+
+    async function resetOfflineDB() {
+      if (!confirm('確定要清除已匯入的條文，恢復為內建原文嗎？（收藏不受影響）')) return;
+      offlineRulesCache = {};
+      allRulesCache = null;
+      try { await saveRulesToIndexedDB({}); } catch (e) {}
+      updateDbBadgeUI();
+      renderBoard();
+    }
+
+    // === 4. UI 狀態與渲染 ===
+    let currentSpecialty = 'rheum';
+    let currentGroupBy = 'disease';
+    let searchQuery = '';
+    let favorites = store.get('nhi_pwa_favs', []);
+    if (!Array.isArray(favorites)) favorites = [];
+    let itemRegistry = [];   // 渲染時登記，onclick 只傳索引，避免藥名含引號時壞掉
+    let activeModalDrug = null;
+
+    function getUniqueKey(item) { return `${item.id}_${item.label}`; }
+    function isFavorite(item) { return favorites.some(f => f.key === getUniqueKey(item)); }
+    function updateFavBadge() { document.getElementById('favCountBadge').textContent = favorites.length; }
+
+    function getActiveItems() {
+      if (currentSpecialty === 'all') {
+        return [...DB.rheum.items, ...DB.heme.items, ...DB.onco.items];
+      }
+      return DB[currentSpecialty].items;
+    }
+
+    function renderBoard() {
+      const container = document.getElementById('boardContainer');
+      itemRegistry = [];
+      const items = getActiveItems();
+      const q = searchQuery.trim().toLowerCase();
+
+      const filtered = q ? items.filter(item => {
+        const rText = (getRuleText(item.id) || '').toLowerCase();
+        return item.label.toLowerCase().includes(q) ||
+               item.id.toLowerCase().includes(q) ||
+               item.title.toLowerCase().includes(q) ||
+               item.mechanism.toLowerCase().includes(q) ||
+               item.diseases.some(d => d.toLowerCase().includes(q)) ||
+               rText.includes(q);
+      }) : items;
+
+      // 看板以外的條文：全文搜尋
+      let extra = [], extraTotal = 0;
+      if (q) {
+        const shown = new Set(items.map(i => i.id));
+        const hits = allRules().filter(r => !shown.has(r.code) && (r.code.toLowerCase() === q || r.code.toLowerCase().startsWith(q + '.') || r.lower.includes(q)));
+        extraTotal = hits.length;
+        extra = hits.slice(0, 80).map(r => ruleAsItem(r.code, r.text));
+      }
+
+      const statusEl = document.getElementById('searchStatus');
+      if (q) {
+        statusEl.classList.remove('hidden');
+        document.getElementById('searchStatusText').textContent = `搜尋「${searchQuery}」：看板 ${filtered.length} 筆、其他條文 ${extraTotal} 則`;
+      } else {
+        statusEl.classList.add('hidden');
+      }
+
+      const groups = new Map();
+      if (currentGroupBy === 'disease') {
+        const order = currentSpecialty === 'all'
+          ? [...new Set([...DB.rheum.diseaseOrder, ...DB.heme.diseaseOrder, ...DB.onco.diseaseOrder])]
+          : DB[currentSpecialty].diseaseOrder;
+        order.forEach(d => groups.set(d, []));
+        filtered.forEach(item => {
+          item.diseases.forEach(d => {
+            if (!groups.has(d)) groups.set(d, []);
+            groups.get(d).push(item);
+          });
+        });
+      } else {
+        const order = currentSpecialty === 'all'
+          ? [...new Set([...DB.rheum.mechanismOrder, ...DB.heme.mechanismOrder, ...DB.onco.mechanismOrder])]
+          : DB[currentSpecialty].mechanismOrder;
+        order.forEach(m => groups.set(m, []));
+        filtered.forEach(item => {
+          const m = item.mechanism || '其他';
+          if (!groups.has(m)) groups.set(m, []);
+          groups.get(m).push(item);
+        });
+      }
+
+      let html = '';
+      groups.forEach((groupItems, groupName) => {
+        if (groupItems.length === 0) return;
+        html += `
+          <div class="group-card">
+            <div class="group-header">
+              <h3 class="group-title">${groupName}</h3>
+              <span class="group-count">${groupItems.length}</span>
+            </div>
+            <ul class="drug-list">
+              ${groupItems.map(item => {
+                const fav = isFavorite(item);
+                const hasRule = !!getRuleText(item.id);
+                const idx = itemRegistry.push(item) - 1;
+                return `
+                  <li>
+                    <button onclick="openDrugModal(${idx})" class="drug-chip ${fav ? 'fav' : ''}">
+                      <span class="chip-code ${hasRule ? 'has-rule' : ''}">${item.id}</span>
+                      <span style="font-weight:600;">${item.label}</span>${fav ? '<span style="color:#f59e0b;">★</span>' : ''}
+                    </button>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          </div>
+        `;
+      });
+
+      if (extra.length) {
+        html += `
+          <div class="group-card">
+            <div class="group-header">
+              <h3 class="group-title">📚 其他條文（全文搜尋）</h3>
+              <span class="group-count">${extraTotal}</span>
+            </div>
+            ${extraTotal > extra.length ? `<p style="font-size:12px;color:var(--ink-muted);margin:0 0 8px 0;">顯示前 ${extra.length} 則，請輸入更精確的關鍵字。</p>` : ''}
+            <ul class="drug-list">
+              ${extra.map(item => {
+                const idx = itemRegistry.push(item) - 1;
+                return `<li><button onclick="openDrugModal(${idx})" class="drug-chip"><span class="chip-code has-rule">${escHtml(item.id)}</span><span style="font-weight:600;">${escHtml(item.label)}</span></button></li>`;
+              }).join('')}
+            </ul>
+          </div>`;
+      }
+
+      container.innerHTML = html || `<div class="group-card" style="text-align:center;color:var(--ink-muted);padding:30px;">找不到符合「${escHtml(searchQuery)}」的項目</div>`;
+    }
+
+    function renderFavorites() {
+      const container = document.getElementById('favoritesContainer');
+      if (favorites.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:28px;color:var(--ink-muted);border:1px dashed var(--line);border-radius:12px;">尚未收藏任何常用藥</div>`;
+        return;
+      }
+      container.innerHTML = favorites.map(item => {
+        const idx = itemRegistry.push(item) - 1;
+        return `
+          <div onclick="openDrugModal(${idx})" style="cursor:pointer;border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;">
+              <strong style="color:var(--brand);font-family:monospace;">${item.id}</strong>
+              <span style="color:var(--ink-muted);">${item.mechanism}</span>
+            </div>
+            <div style="font-weight:700;font-size:14.5px;margin-top:4px;">${item.label}</div>
+            <div style="font-size:12px;color:var(--ink-muted);margin-top:3px;">${item.diseases.join('、')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function switchTab(tab) {
+      ['board', 'favorites', 'database'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`nav-${t}`).classList.toggle('active', t === tab);
+      });
+      if (tab === 'favorites') renderFavorites();
+      window.scrollTo(0, 0);
+    }
+
+    function setSpecialty(spec) {
+      currentSpecialty = spec;
+      ['rheum', 'heme', 'onco', 'all'].forEach(s => {
+        document.getElementById(`spec-${s}`).classList.toggle('active', s === spec);
+      });
+      renderBoard();
+    }
+
+    function setGroupBy(group) {
+      currentGroupBy = group;
+      ['disease', 'mechanism'].forEach(g => {
+        document.getElementById(`group-${g}`).classList.toggle('active', g === group);
+      });
+      renderBoard();
+    }
+
+    let searchTimer = null;
+    function handleSearch(val) {
+      searchQuery = val;
+      document.getElementById('clearSearchBtn').classList.toggle('hidden', !val);
+      if (document.getElementById('view-board').classList.contains('hidden')) switchTab('board');
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderBoard, val ? 150 : 0);
+    }
+
+    function clearSearch() {
+      document.getElementById('globalSearch').value = '';
+      handleSearch('');
+    }
+
+    // === 5. Modal 與事審產生器 ===
+    function openDrugModal(idx) {
+      const item = itemRegistry[idx];
+      if (!item) return;
+      activeModalDrug = item;
+
+      document.getElementById('modalCode').textContent = `條文 ${item.id}`;
+      document.getElementById('modalMechanism').textContent = item.mechanism;
+      document.getElementById('modalTitle').textContent = item.label;
+      document.getElementById('modalTextSearch').value = searchQuery || '';
+
+      const indSelect = document.getElementById('calcIndication');
+      indSelect.innerHTML = item.diseases.map(d => `<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+
+      document.getElementById('calcRegimen').value = item.defaultRegimen || '依仿單與健保給付規範給藥';
+      document.getElementById('calcTotalQty').value = '';
+      document.getElementById('calcNote').value = '';
+
+      renderModalRuleText();
+      updateModalFavBtn();
+      updateDraftText();
+
+      const sheet = document.getElementById('drugModal');
+      const wasOpen = sheet.classList.contains('open');
+      sheet.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('modalRuleContent').scrollTop = 0;
+      // 推一筆歷史紀錄：手機「返回」或左滑時只關閉視窗，不離開 App
+      if (!wasOpen) { try { history.pushState({ modal: true }, ''); } catch (e) {} }
+    }
+
+    function renderModalRuleText() {
+      if (!activeModalDrug) return;
+      const rule = getRule(activeModalDrug.id);
+      const raw = rule ? rule.text : null;
+      const srcEl = document.getElementById('modalSource');
+      if (rule && rule.source === 'builtin') {
+        srcEl.className = 'src-tag src-builtin';
+        srcEl.textContent = `健保署原文｜${sectionLabel(rule.code)}｜${BUILTIN_SOURCE.label}`;
+      } else if (rule) {
+        srcEl.className = 'src-tag src-import';
+        srcEl.textContent = '你匯入的版本' + (rule.code !== activeModalDrug.id ? `（顯示 ${rule.code}）` : '');
+      } else {
+        srcEl.className = 'src-tag src-none';
+        srcEl.textContent = '尚無條文內文';
+      }
+      const kw = document.getElementById('modalTextSearch').value.trim();
+      let text = raw || `${activeModalDrug.title}\n\n（尚未匯入此條文之完整內文。請點選下方「離線條文庫」分頁，將健保署 Word 全文複製貼上，即可永久離線檢視。）`;
+      text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      text = text.replace(/\t+/g, ' │ ');   // 表格儲存格分隔（僅顯示用）
+      if (kw) {
+        const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp(`(${esc})`, 'gi'), '<mark>$1</mark>');
+      }
+      document.getElementById('modalRuleContent').innerHTML = text;
+    }
+
+    function closeModal(fromHistory) {
+      const sheet = document.getElementById('drugModal');
+      if (!sheet.classList.contains('open')) return;
+      sheet.classList.remove('open');
+      document.body.style.overflow = '';
+      activeModalDrug = null;
+      if (!fromHistory && history.state && history.state.modal) { try { history.back(); } catch (e) {} }
+    }
+    window.addEventListener('popstate', () => closeModal(true));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    function updateModalFavBtn() {
+      if (!activeModalDrug) return;
+      const fav = isFavorite(activeModalDrug);
+      const btn = document.getElementById('modalFavBtn');
+      btn.textContent = fav ? '★ 已收藏' : '☆ 收藏';
+      btn.style.color = fav ? '#d97706' : 'var(--ink)';
+    }
+
+    function toggleFavoriteFromModal() {
+      if (!activeModalDrug) return;
+      const key = getUniqueKey(activeModalDrug);
+      const idx = favorites.findIndex(f => f.key === key);
+      if (idx >= 0) favorites.splice(idx, 1);
+      else favorites.push({ ...activeModalDrug, key });
+      store.set('nhi_pwa_favs', favorites);
+      updateFavBadge();
+      updateModalFavBtn();
+      renderBoard();
+    }
+
+    function updateDraftText() {
+      if (!activeModalDrug) return;
+      const type = document.getElementById('calcType').value;
+      const ind = document.getElementById('calcIndication').value;
+      const weight = document.getElementById('calcWeight').value;
+      const duration = document.getElementById('calcDuration').value;
+      const regimen = document.getElementById('calcRegimen').value;
+      const totalQty = document.getElementById('calcTotalQty').value;
+      const note = document.getElementById('calcNote').value;
+
+      const lines = [
+        `【健保事前審查－${type}】`,
+        `1. 申請藥品：${activeModalDrug.label}（健保條文 ${activeModalDrug.id}）`,
+        `2. 申請適應症：${ind}（體重 ${weight} kg）`,
+        `3. 治療計畫：${regimen}，申請療程 ${duration}${totalQty ? '，總量：' + totalQty : ''}。`,
+        `4. 臨床依據：${note ? note + '，' : ''}符合健保給付規定第 ${activeModalDrug.id} 條規範。`
+      ];
+      document.getElementById('calcOutput').value = lines.join('\n');
+    }
+
+    function copyDraftText() {
+      const el = document.getElementById('calcOutput');
+      const btn = document.getElementById('copyBtn');
+      const done = (ok) => { btn.textContent = ok ? '✓ 已複製' : '請長按文字手動複製'; setTimeout(() => { btn.textContent = '複製文字'; }, 1800); };
+      const legacy = () => { try { el.focus(); el.select(); done(document.execCommand('copy')); } catch (e) { done(false); } };
+      try {
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(el.value).then(() => done(true), legacy);
+        else legacy();
+      } catch (e) { legacy(); }
+    }
+
+    document.getElementById('drugModal').addEventListener('click', (e) => {
+      if (e.target.id === 'drugModal') closeModal();
+    });
+
+    // === 6. App 化：Service Worker、安裝提示、連線狀態 ===
+    function showToast(text, btnText, onBtn, ms) {
+      const t = document.getElementById('toast'), b = document.getElementById('toastBtn');
+      document.getElementById('toastText').textContent = text;
+      if (btnText) { b.textContent = btnText; b.onclick = onBtn; b.classList.remove('hidden'); } else b.classList.add('hidden');
+      t.classList.remove('hidden');
+      clearTimeout(showToast._t);
+      if (ms) showToast._t = setTimeout(() => t.classList.add('hidden'), ms);
+    }
+
+    let deferredInstall = null;
+    const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    function updateInstallUI() {
+      const st = document.getElementById('installStatus'), btn = document.getElementById('installBtn');
+      if (isStandalone()) { st.textContent = '✅ 目前以 App 模式執行。'; btn.classList.add('hidden'); return; }
+      if (location.protocol === 'file:') { st.textContent = '⚠️ 目前是直接開啟檔案（file://），無法安裝或離線快取；請放到 HTTPS 網址（如 GitHub Pages）。'; btn.classList.add('hidden'); return; }
+      st.textContent = deferredInstall ? '可直接安裝：' : '依你的裝置照下列步驟安裝：';
+      btn.classList.toggle('hidden', !deferredInstall);
+    }
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; updateInstallUI(); });
+    window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallUI(); showToast('已安裝到主畫面', null, null, 2500); });
+    async function promptInstall() {
+      if (!deferredInstall) return;
+      deferredInstall.prompt();
+      try { await deferredInstall.userChoice; } catch (e) {}
+      deferredInstall = null; updateInstallUI();
+    }
+
+    function registerSW() {
+      if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        const ask = (w) => showToast('有新版本可用', '重新載入', () => w.postMessage('skipWaiting'));
+        if (reg.waiting && navigator.serviceWorker.controller) ask(reg.waiting);
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          w && w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) ask(w); });
+        });
+      }).catch(() => {});
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
+    }
+
+    function updateOnline() { document.getElementById('offlinePill').classList.toggle('hidden', navigator.onLine); }
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      updateFavBadge();
+      renderBoard();               // 先用內建條文畫出畫面，再補上匯入資料
+      await loadRulesFromIndexedDB();
+      renderBoard();
+      updateInstallUI();
+      updateOnline();
+      registerSW();
+    });
+  </script>
+</body>
+</html>
